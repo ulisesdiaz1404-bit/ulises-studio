@@ -12,6 +12,15 @@
 </head>
 <body>
 
+  <!-- BACKGROUND LAYERS (estilo jhonnylubo) -->
+  <div class="bg-glow-layer" aria-hidden="true"></div>
+  <div class="bg-pages-layer" aria-hidden="true"></div>
+
+  <!-- CURSOR CUSTOM -->
+  <div id="cursor" aria-hidden="true">
+    <div class="cursor__circle"></div>
+  </div>
+
   <!-- NAV -->
   <nav class="nav">
     <div class="nav-inner">
@@ -36,8 +45,77 @@
         <a href="#cotizar" class="btn btn-primary">Pedir cotización →</a>
         <a href="#proyectos" class="btn btn-ghost">Ver proyectos</a>
       </div>
+
+      <!-- SOCIAL ICONS (estilo jhonnylubo: píldora oscura con glow) -->
+      <div class="social-pill" role="list" aria-label="Redes sociales y contacto">
+        <a href="https://instagram.com/ulisesdiaz._" target="_blank" rel="noopener" class="social-pill-item" title="Instagram @ulisesdiaz._" aria-label="Instagram">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
+            <path d="M11.1753 3.35893C13.7188 3.35893 14.0199 3.37009 15.0202 3.41471C15.9498 3.45561 16.4518 3.61178 16.7865 3.74193C17.229 3.91298 17.5487 4.12121 17.8797 4.45215C18.2143 4.78681 18.4189 5.10288 18.5899 5.54537C18.7201 5.88003 18.8762 6.38574 18.9171 7.31163C18.9618 8.31561 18.9729 8.61681 18.9729 11.1565C18.9729 13.6999 18.9618 14.0011 18.9171 15.0014C18.8762 15.931 18.7201 16.433 18.5899 16.7676C18.4189 17.2101 18.2106 17.5299 17.8797 17.8609C17.545 18.1955 17.229 18.4 16.7865 18.5711C16.4518 18.7012 15.9461 18.8574 15.0202 18.8983C14.0162 18.9429 13.715 18.9541 11.1753 18.9541C8.63193 18.9541 8.33073 18.9429 7.33047 18.8983C6.40086 18.8574 5.89887 18.7012 5.56421 18.5711C5.12172 18.4 4.80193 18.1918 4.47099 17.8609C4.13633 17.5262 3.93181 17.2101 3.76077 16.7676C3.63062 16.433 3.47445 15.9273 3.43354 15.0014C3.38892 13.9974 3.37777 13.6962 3.37777 11.1565C3.37777 8.61309 3.38892 8.31189 3.43354 7.31163C3.47445 6.38202 3.63062 5.88003 3.76077 5.54537C3.93181 5.10288 4.14005 4.78309 4.47099 4.45215C4.80565 4.11749 5.12172 3.91298 5.56421 3.74193C5.89887 3.61178 6.40458 3.45561 7.33047 3.41471C8.33073 3.37009 8.63193 3.35893 11.1753 3.35893ZM11.1753 1.64473C8.59102 1.64473 8.26752 1.65588 7.25238 1.70051C6.24097 1.74513 5.54562 1.90874 4.94323 2.143C4.31481 2.38842 3.78308 2.71192 3.25506 3.24366C2.72332 3.77168 2.39982 4.30342 2.1544 4.92811C1.92014 5.53422 1.75653 6.22585 1.7119 7.23726C1.66728 8.25612 1.65613 8.57962 1.65613 11.1639C1.65613 13.7483 1.66728 14.0718 1.7119 15.0869C1.75653 16.0983 1.92014 16.7937 2.1544 17.396C2.39982 18.0245 2.72332 18.5562 3.25506 19.0842C3.78308 19.6122 4.31481 19.9395 4.93951 20.1812C5.54562 20.4154 6.23725 20.579 7.24866 20.6237C8.2638 20.6683 8.5873 20.6794 11.1716 20.6794C13.7559 20.6794 14.0794 20.6683 15.0946 20.6237C16.106 20.579 16.8013 20.4154 17.4037 20.1812C18.0284 19.9395 18.5602 19.6122 19.0882 19.0842C19.6162 18.5562 19.9434 18.0245 20.1851 17.3998C20.4194 16.7937 20.583 16.102 20.6276 15.0906C20.6722 14.0755 20.6834 13.752 20.6834 11.1677C20.6834 8.58334 20.6722 8.25984 20.6276 7.2447C20.583 6.23329 20.4194 5.53794 20.1851 4.93555C19.9509 4.30341 19.6274 3.77168 19.0956 3.24366C18.5676 2.71564 18.0359 2.38842 17.4112 2.14672C16.8051 1.91246 16.1134 1.74885 15.102 1.70422C14.0832 1.65588 13.7597 1.64473 11.1753 1.64473Z"/>
+            <path d="M11.1754 6.27419C8.47579 6.27419 6.28563 8.46435 6.28563 11.1639C6.28563 13.8635 8.47579 16.0537 11.1754 16.0537C13.875 16.0537 16.0651 13.8635 16.0651 11.1639C16.0651 8.46435 13.875 6.27419 11.1754 6.27419ZM11.1754 14.3358C9.424 14.3358 8.00355 12.9153 8.00355 11.1639C8.00355 9.41255 9.424 7.99211 11.1754 7.99211C12.9268 7.99211 14.3472 9.41255 14.3472 11.1639C14.3472 12.9153 12.9268 14.3358 11.1754 14.3358Z"/>
+            <path d="M17.4001 6.08084C17.4001 6.71298 16.8869 7.22241 16.2585 7.22241C15.6264 7.22241 15.1169 6.70926 15.1169 6.08084C15.1169 5.44871 15.6301 4.93928 16.2585 4.93928C16.8869 4.93928 17.4001 5.45243 17.4001 6.08084Z"/>
+          </svg>
+        </a>
+        <a href="https://wa.me/5491163623650?text=Hola%20Ulises%2C%20vengo%20desde%20tu%20web" target="_blank" rel="noopener" class="social-pill-item" title="WhatsApp +54 9 11 6362-3650" aria-label="WhatsApp">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+        </a>
+        <a href="mailto:ulisesdiaz1404@gmail.com?subject=Consulta%20desde%20tu%20web" class="social-pill-item" title="Email ulisesdiaz1404@gmail.com" aria-label="Email">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm0 4.236l-8 4.882-8-4.882V6l8 4.882L20 6v2.236z"/>
+          </svg>
+        </a>
+      </div>
     </div>
+
     <div class="hero-bg"></div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="section section-about">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-text">
+          <p class="section-eyebrow">Sobre mí</p>
+          <h2 class="section-title">Detrás del <em>código</em></h2>
+          <p class="about-lead">
+            Soy <strong>Ulises Díaz</strong>, desarrollador web freelance. Diseño y programo sitios desde cero — sin plantillas, sin atajos, sin parches.
+          </p>
+          <p class="about-body">
+            Trabajo de manera <em>directa</em>: vos me contás qué necesita tu negocio, yo te propongo una solución concreta y la ejecuto end-to-end. Diseño, desarrollo, deploy y soporte — todo desde una sola persona, sin intermediarios ni equipos que te tiren la pelota.
+          </p>
+          <p class="about-body">
+            Me obsesiona el detalle: tipografía, micro-interacciones, performance, SEO técnico. Una web no es solo "estar en internet" — es la primera impresión que da tu marca. Si carga lento, se ve mal en mobile o no convierte, perdiste antes de empezar.
+          </p>
+          <ul class="about-pills">
+            <li class="about-pill"><span>01</span> Diseño a medida</li>
+            <li class="about-pill"><span>02</span> Código limpio</li>
+            <li class="about-pill"><span>03</span> Carga ultra-rápida</li>
+            <li class="about-pill"><span>04</span> SEO técnico</li>
+            <li class="about-pill"><span>05</span> Soporte directo</li>
+          </ul>
+        </div>
+
+        <div class="about-side">
+          <div class="about-card">
+            <span class="about-card-label">Stack</span>
+            <p class="about-card-value">HTML · CSS · JavaScript · Node · React</p>
+          </div>
+          <div class="about-card">
+            <span class="about-card-label">Tiempo de respuesta</span>
+            <p class="about-card-value">&lt; 24 hs</p>
+          </div>
+          <div class="about-card">
+            <span class="about-card-label">Modalidad</span>
+            <p class="about-card-value">100% remoto · Trabajo con clientes de toda LATAM</p>
+          </div>
+          <div class="about-card">
+            <span class="about-card-label">Filosofía</span>
+            <p class="about-card-value">Menos features, mejor ejecutadas.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- STATS -->
@@ -214,6 +292,54 @@
 
   <!-- COTIZAR -->
   <section id="cotizar" class="section section-cta">
+    <!-- ESCENA DEL PLANETA: arco brillante + atmósfera + partículas -->
+    <div class="planet-stage" aria-hidden="true">
+      <div class="planet-atmosphere"></div>
+      <div class="planet"></div>
+      <div class="particle-container">
+        <span class="particle p1"></span>
+        <span class="particle p2"></span>
+        <span class="particle p3"></span>
+        <span class="particle p4"></span>
+        <span class="particle p5"></span>
+        <span class="particle p6"></span>
+        <span class="particle p7"></span>
+        <span class="particle p8"></span>
+        <span class="particle p9"></span>
+        <span class="particle p10"></span>
+        <span class="particle p11"></span>
+        <span class="particle p12"></span>
+        <span class="particle p13"></span>
+        <span class="particle p14"></span>
+        <span class="particle p15"></span>
+        <span class="particle p16"></span>
+        <span class="particle p17"></span>
+        <span class="particle p18"></span>
+        <span class="particle p19"></span>
+        <span class="particle p20"></span>
+        <!-- Partículas en la superficie del planeta (semiesfera) — más grandes, más brillantes -->
+        <span class="particle surface sp1"></span>
+        <span class="particle surface sp2"></span>
+        <span class="particle surface sp3"></span>
+        <span class="particle surface sp4"></span>
+        <span class="particle surface sp5"></span>
+        <span class="particle surface sp6"></span>
+        <span class="particle surface sp7"></span>
+        <span class="particle surface sp8"></span>
+        <span class="particle surface sp9"></span>
+        <span class="particle surface sp10"></span>
+        <span class="particle surface sp11"></span>
+        <span class="particle surface sp12"></span>
+        <span class="particle surface sp13"></span>
+        <span class="particle surface sp14"></span>
+        <span class="particle surface sp15"></span>
+        <span class="particle surface sp16"></span>
+        <span class="particle surface sp17"></span>
+        <span class="particle surface sp18"></span>
+      </div>
+      <div class="planet-fade"></div>
+    </div>
+
     <div class="container">
       <div class="section-header center">
         <div>
@@ -329,10 +455,31 @@
 
         <button type="submit" class="btn btn-primary btn-block">Enviar consulta →</button>
         <p class="form-note">
-          Te respondo en menos de 24 horas con una propuesta personalizada.<br/>
-          La consulta llega a <span class="mono">ulisesdiaz1404@gmail.com</span> —
-          <a href="mailto:ulisesdiaz1404@gmail.com?subject=Consulta%20desde%20Ulises%20Studio" class="mailto-link">o escribime directo ↗</a>
+          Te respondo en menos de 24 horas con una propuesta personalizada.
         </p>
+        <div class="form-channels">
+          <a href="mailto:ulisesdiaz1404@gmail.com?subject=Consulta%20desde%20Ulises%20Studio" class="channel">
+            <span class="channel-icon">✉</span>
+            <span class="channel-meta">
+              <span class="channel-label">Email</span>
+              <span class="channel-value">ulisesdiaz1404@gmail.com</span>
+            </span>
+          </a>
+          <a href="https://wa.me/5491163623650?text=Hola%20Ulises%2C%20vengo%20desde%20tu%20web" target="_blank" rel="noopener" class="channel">
+            <span class="channel-icon">●</span>
+            <span class="channel-meta">
+              <span class="channel-label">WhatsApp</span>
+              <span class="channel-value">+54 9 11 6362-3650</span>
+            </span>
+          </a>
+          <a href="https://instagram.com/ulisesdiaz._" target="_blank" rel="noopener" class="channel">
+            <span class="channel-icon">◎</span>
+            <span class="channel-meta">
+              <span class="channel-label">Instagram</span>
+              <span class="channel-value">@ulisesdiaz._</span>
+            </span>
+          </a>
+        </div>
       </form>
 
       <!-- Inquiries (PRIVADO — solo visible para Ulises al desbloquear) -->
@@ -372,6 +519,8 @@
         <div>
           <h4>Contacto</h4>
           <a href="mailto:ulisesdiaz1404@gmail.com">ulisesdiaz1404@gmail.com</a>
+          <a href="https://wa.me/5491163623650" target="_blank" rel="noopener">WhatsApp +54 9 11 6362-3650</a>
+          <a href="https://instagram.com/ulisesdiaz._" target="_blank" rel="noopener">Instagram @ulisesdiaz._</a>
         </div>
       </div>
       <div class="footer-bottom">
@@ -389,6 +538,41 @@
       <div id="modal-body"></div>
     </div>
   </div>
+
+  <!-- CURSOR CUSTOM SCRIPT -->
+  <script>
+    (function () {
+      if (window.innerWidth <= 1024) return;
+      var cursor = document.getElementById('cursor');
+      if (!cursor) return;
+      var circle = cursor.querySelector('.cursor__circle');
+      var mouse = { x: -100, y: -100 };
+      var last = { x: -100, y: -100 };
+      var rafId = null;
+
+      function tick() {
+        if (mouse.x !== last.x || mouse.y !== last.y) {
+          cursor.style.transform = 'translate3d(' + mouse.x + 'px,' + mouse.y + 'px,0)';
+          last.x = mouse.x; last.y = mouse.y;
+        }
+        rafId = requestAnimationFrame(tick);
+      }
+      window.addEventListener('mousemove', function (e) {
+        mouse.x = e.clientX; mouse.y = e.clientY;
+        if (!rafId) rafId = requestAnimationFrame(tick);
+      });
+      window.addEventListener('mouseleave', function () { cancelAnimationFrame(rafId); rafId = null; });
+      window.addEventListener('mouseenter', function () { if (!rafId) rafId = requestAnimationFrame(tick); });
+
+      var hoverables = document.querySelectorAll(
+        'a, button, input, select, textarea, label, [role="button"], [onclick], .btn, .nav-links a, .channel, .testimonial, .stat, .project-card, .social-pill-item'
+      );
+      hoverables.forEach(function (el) {
+        el.addEventListener('mouseenter', function () { circle.classList.add('is-hover'); });
+        el.addEventListener('mouseleave', function () { circle.classList.remove('is-hover'); });
+      });
+    })();
+  </script>
 
   <script src="script.js"></script>
 </body>

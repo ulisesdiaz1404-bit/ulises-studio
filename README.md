@@ -20,4 +20,6 @@ Portafolio + mini-CRM privado (clientes, ingresos) + formulario de cotización p
 
 ## Contacto
 
-📧 ulisesdiaz1404@gmail.com
+- Email: ulisesdiaz1404@gmail.com
+- WhatsApp: +54 9 11 6362-3650
+- Instagram: [@ulisesdiaz._](https://instagram.com/ulisesdiaz._)
