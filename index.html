@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ulises Studio — Desarrollo web freelance</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="#hero" class="nav-logo">Ulises<em>Studio</em></a>
+      <ul class="nav-links">
+        <li><a href="#proyectos">Proyectos</a></li>
+        <li><a href="#clientes">Clientes</a></li>
+        <li><a href="#resenias">Reseñas</a></li>
+        <li><a href="#ingresos">Ingresos</a></li>
+        <li><a href="#cotizar">Cotizar</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section id="hero" class="hero">
+    <div class="hero-content">
+      <p class="hero-eyebrow">Desarrollo web freelance — Disponible</p>
+      <h1 class="hero-title">Webs <em>hechas</em><br/>para <em>vender.</em></h1>
+      <p class="hero-sub">Construyo sitios profesionales para negocios y marcas personales. Diseño preciso, código sólido, resultados medibles.</p>
+      <div class="hero-actions">
+        <a href="#cotizar" class="btn btn-primary">Pedir cotización →</a>
+        <a href="#proyectos" class="btn btn-ghost">Ver proyectos</a>
+      </div>
+    </div>
+    <div class="hero-bg"></div>
+  </section>
+
+  <!-- STATS -->
+  <section class="stats">
+    <div class="container">
+      <div class="stat">
+        <div class="stat-num" data-stat="proyectos">0</div>
+        <div class="stat-label">Proyectos</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" data-stat="clientes">0</div>
+        <div class="stat-label">Clientes activos</div>
+      </div>
+      <div class="stat stat-private">
+        <div class="stat-num money" data-stat="ingresos-mes">$0</div>
+        <div class="stat-label">Este mes</div>
+      </div>
+      <div class="stat stat-private">
+        <div class="stat-num money" data-stat="ingresos-total">$0</div>
+        <div class="stat-label">Total facturado</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROYECTOS -->
+  <section id="proyectos" class="section">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <p class="section-eyebrow">Portafolio</p>
+          <h2 class="section-title">Trabajos <em>seleccionados</em></h2>
+        </div>
+        <button class="btn btn-dark" onclick="openModal('proyecto')">+ Nuevo proyecto</button>
+      </div>
+      <div id="proyectos-grid" class="grid grid-3"></div>
+      <div id="proyectos-empty" class="empty hidden">
+        <p>Todavía no tenés proyectos cargados.<br/>Agregá el primero para que aparezca acá.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLIENTES -->
+  <section id="clientes" class="section section-dark">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <p class="section-eyebrow">Confían en mí</p>
+          <h2 class="section-title">Quiénes son <em>mis clientes</em></h2>
+        </div>
+        <button class="btn btn-light" onclick="openModal('cliente')">+ Nuevo cliente</button>
+      </div>
+      <div class="table-wrap">
+        <table id="clientes-table" class="table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Qué hicimos</th>
+              <th>Contacto</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="clientes-empty" class="empty hidden">
+          <p>Sin clientes todavía.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESEÑAS -->
+  <section id="resenias" class="section section-resenias">
+    <div class="container">
+      <div class="section-header center">
+        <div>
+          <p class="section-eyebrow">Lo que dicen</p>
+          <h2 class="section-title">Reseñas <em>de clientes</em></h2>
+        </div>
+      </div>
+    </div>
+    <div class="marquee-wrap">
+      <div id="resenias-track" class="marquee-track"></div>
+    </div>
+    <div class="container" style="text-align:center; margin-top:48px;">
+      <button class="btn btn-light" onclick="openModal('resenia')">+ Nueva reseña</button>
+    </div>
+  </section>
+
+  <!-- INGRESOS -->
+  <section id="ingresos" class="section">
+    <div class="container">
+
+      <!-- LOCK SCREEN -->
+      <div id="ingresos-locked" class="lock-screen">
+        <div class="lock-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <p class="section-eyebrow">Sección privada</p>
+        <h2 class="section-title"><em>Ingresos</em></h2>
+        <p class="lock-sub">Esta sección está protegida. Ingresá tu contraseña para ver el detalle financiero.</p>
+        <form id="lock-form" class="lock-form" autocomplete="off">
+          <input type="password" id="lock-input" placeholder="Contraseña" required />
+          <button type="submit" class="btn btn-primary">Desbloquear</button>
+        </form>
+        <p id="lock-error" class="lock-error hidden">Contraseña incorrecta</p>
+      </div>
+
+      <!-- CONTENIDO PRIVADO -->
+      <div id="ingresos-content" class="hidden">
+      <div class="section-header">
+        <div>
+          <p class="section-eyebrow">Finanzas</p>
+          <h2 class="section-title"><em>Ingresos</em></h2>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-light" onclick="changePassword()" title="Cambiar contraseña">⚙ Contraseña</button>
+          <button class="btn btn-light" onclick="lockIngresos()" title="Bloquear">🔒 Bloquear</button>
+          <button class="btn btn-dark" onclick="openModal('ingreso')">+ Nuevo ingreso</button>
+        </div>
+      </div>
+
+      <div class="ingresos-grid">
+        <div class="card-chart">
+          <div class="card-chart-header">
+            <h3>Evolución mensual</h3>
+            <div class="legend">
+              <span class="dot dot-paid"></span> Cobrado
+              <span class="dot dot-pending"></span> Pendiente
+            </div>
+          </div>
+          <canvas id="ingresos-chart"></canvas>
+        </div>
+        <div class="card-summary">
+          <div class="sum-row">
+            <span>Cobrado total</span>
+            <strong data-sum="cobrado">$0</strong>
+          </div>
+          <div class="sum-row">
+            <span>Pendiente de cobro</span>
+            <strong data-sum="pendiente">$0</strong>
+          </div>
+          <div class="sum-row">
+            <span>Promedio por proyecto</span>
+            <strong data-sum="promedio">$0</strong>
+          </div>
+          <div class="sum-row total">
+            <span>Total facturado</span>
+            <strong data-sum="total">$0</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:32px">
+        <table id="ingresos-table" class="table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Cliente</th>
+              <th>Concepto</th>
+              <th>Estado</th>
+              <th>Monto</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="ingresos-empty" class="empty hidden">
+          <p>Cargá tu primer ingreso para ver el gráfico.</p>
+        </div>
+      </div>
+      </div><!-- /ingresos-content -->
+    </div>
+  </section>
+
+  <!-- COTIZAR -->
+  <section id="cotizar" class="section section-cta">
+    <div class="container">
+      <div class="section-header center">
+        <div>
+          <p class="section-eyebrow">Para nuevos clientes</p>
+          <h2 class="section-title">Hablemos de <em>tu proyecto</em></h2>
+          <p class="section-sub">Respondé estas preguntas para que pueda armarte una propuesta a medida. Te respondo en menos de 24h al mail.</p>
+        </div>
+      </div>
+
+      <form id="cotizar-form" class="form-card" autocomplete="off">
+        <input type="hidden" name="_subject" value="Nueva consulta — Ulises Studio" />
+        <input type="hidden" name="_template" value="table" />
+        <input type="hidden" name="_captcha" value="false" />
+        <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off" />
+        <div class="form-row">
+          <label>
+            <span>Nombre y apellido *</span>
+            <input type="text" name="nombre" required />
+          </label>
+          <label>
+            <span>Email *</span>
+            <input type="email" name="email" required />
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label>
+            <span>WhatsApp / Teléfono</span>
+            <input type="text" name="telefono" />
+          </label>
+          <label>
+            <span>Negocio / Marca</span>
+            <input type="text" name="negocio" />
+          </label>
+        </div>
+
+        <label>
+          <span>¿Qué tipo de web necesitás? *</span>
+          <select name="tipo" required>
+            <option value="">Elegí una opción</option>
+            <option>Landing page (1 página)</option>
+            <option>Web institucional (varias secciones)</option>
+            <option>Portafolio / Marca personal</option>
+            <option>Tienda online / E-commerce</option>
+            <option>Sistema o app web</option>
+            <option>Otro / No estoy seguro</option>
+          </select>
+        </label>
+
+        <label>
+          <span>¿Cuál es el objetivo principal? *</span>
+          <select name="objetivo" required>
+            <option value="">Elegí una opción</option>
+            <option>Vender productos / servicios</option>
+            <option>Captar clientes / leads</option>
+            <option>Mostrar mi trabajo / portafolio</option>
+            <option>Reservas o turnos online</option>
+            <option>Información / Imagen de marca</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Webs de referencia que te gusten (links o nombres)</span>
+          <textarea name="referencias" rows="2" placeholder="Ej: apple.com, linear.app, o cualquier web que te haya gustado"></textarea>
+        </label>
+
+        <div class="form-row">
+          <label>
+            <span>¿Ya tenés contenido? (textos, fotos, logo)</span>
+            <select name="contenido">
+              <option>Sí, todo listo</option>
+              <option>Algo tengo, falta lo demás</option>
+              <option>No tengo nada todavía</option>
+            </select>
+          </label>
+          <label>
+            <span>¿Tenés dominio y hosting?</span>
+            <select name="dominio">
+              <option>Sí, ya tengo</option>
+              <option>No, necesito ayuda</option>
+              <option>No sé qué es</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label>
+            <span>Presupuesto aproximado</span>
+            <select name="presupuesto">
+              <option>Menos de $200 USD</option>
+              <option>$200 - $500 USD</option>
+              <option>$500 - $1000 USD</option>
+              <option>$1000 - $2500 USD</option>
+              <option>Más de $2500 USD</option>
+              <option>Prefiero que me cotices</option>
+            </select>
+          </label>
+          <label>
+            <span>¿Para cuándo la necesitás?</span>
+            <select name="plazo">
+              <option>Lo antes posible</option>
+              <option>En 2-4 semanas</option>
+              <option>En 1-2 meses</option>
+              <option>No tengo apuro</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          <span>Contame algo más sobre tu proyecto</span>
+          <textarea name="mensaje" rows="4" placeholder="Lo que sea importante: tu negocio, lo que vendés, qué problema querés resolver..."></textarea>
+        </label>
+
+        <button type="submit" class="btn btn-primary btn-block">Enviar consulta →</button>
+        <p class="form-note">
+          Te respondo en menos de 24 horas con una propuesta personalizada.<br/>
+          La consulta llega a <span class="mono">ulisesdiaz1404@gmail.com</span> —
+          <a href="mailto:ulisesdiaz1404@gmail.com?subject=Consulta%20desde%20Ulises%20Studio" class="mailto-link">o escribime directo ↗</a>
+        </p>
+      </form>
+
+      <!-- Inquiries (PRIVADO — solo visible para Ulises al desbloquear) -->
+      <div class="inquiries private-block">
+        <div class="private-tag">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Sección privada
+        </div>
+        <h3>Consultas recibidas</h3>
+        <p class="inquiries-sub">Las consultas que enviás desde el formulario llegan a <span class="mono">ulisesdiaz1404@gmail.com</span> y también quedan acá guardadas.</p>
+        <div id="inquiries-list"></div>
+        <div id="inquiries-empty" class="empty hidden">
+          <p>Las consultas que lleguen aparecerán acá.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-logo">Ulises Studio</div>
+          <p>Desarrollo web freelance. Diseño limpio, código sólido.</p>
+        </div>
+        <div>
+          <h4>Navegación</h4>
+          <a href="#proyectos">Proyectos</a>
+          <a href="#clientes">Clientes</a>
+          <a href="#ingresos">Ingresos</a>
+          <a href="#cotizar">Cotizar</a>
+        </div>
+        <div>
+          <h4>Contacto</h4>
+          <a href="mailto:ulisesdiaz1404@gmail.com">ulisesdiaz1404@gmail.com</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© <span id="year"></span> Ulises Studio. Todos los derechos reservados.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL GENÉRICO -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-overlay" onclick="closeModal()"></div>
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()" aria-label="Cerrar">×</button>
+      <h3 id="modal-title"></h3>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
