@@ -786,14 +786,74 @@ function initScrollAnimations() {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         entry.target.classList.add('visible');
+        if (entry.target.dataset.stagger) {
+          const children = entry.target.querySelectorAll('.stagger-child');
+          children.forEach((child, i) => {
+            setTimeout(() => child.classList.add('visible'), i * 80);
+          });
+        }
       }
     });
-  }, { threshold: 0.1 });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
 
-  document.querySelectorAll('.section, .stat, .project-card, .inquiry-card').forEach(el => {
+  document.querySelectorAll('.section, .stat, .project-card, .inquiry-card, .about-card, .about-pill, .prosp-search-card, .prosp-kpi').forEach(el => {
     el.classList.add('fade-in');
     observer.observe(el);
   });
+
+  initParallaxEffect();
+  initCounterAnimations();
+}
+
+function initParallaxEffect() {
+  const shapes = document.querySelector('.hero-shapes');
+  if (!shapes || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const scrollY = window.scrollY;
+        if (scrollY < window.innerHeight * 1.5) {
+          shapes.style.transform = `translate3d(0, ${scrollY * 0.12}px, 0)`;
+        }
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+}
+
+function initCounterAnimations() {
+  const counters = document.querySelectorAll('[data-stat]');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !entry.target.dataset.counted) {
+        entry.target.dataset.counted = '1';
+        const target = parseInt(entry.target.textContent.replace(/[^0-9]/g, '')) || 0;
+        if (target > 0) {
+          animateCounter(entry.target, target);
+        }
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.5 });
+  counters.forEach(el => observer.observe(el));
+}
+
+function animateCounter(el, target) {
+  const isMoney = el.classList.contains('money');
+  const start = performance.now();
+  const duration = 1200;
+  function tick(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 4);
+    const current = Math.round(target * eased);
+    el.textContent = isMoney ? fmtMoney(current) : current;
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 
 /* ============================================
@@ -894,6 +954,739 @@ document.getElementById('year').textContent = new Date().getFullYear();
   renderClientes();
   renderResenias();
   renderInquiries();
-  applyLockUI(); // sets isUnlocked=false, hides money stats + ingresos + inquiries
+  applyLockUI();
   initScrollAnimations();
+  initProspeccion();
+  initSecurityLayer();
+  initGeoHero();
+  initPlanetParticles();
 })();
+
+/* ============================================
+   PROSPECCIÓN — Búsqueda de clientes
+   ============================================ */
+
+let prospCfg = {};
+let prospMode = 'real';
+let prospData = [];
+let prospSearchCount = 0;
+let prospLastSearchTime = 0;
+const PROSP_RATE_LIMIT_MS = 5000;
+
+function initProspeccion() {
+  const stored = localStorage.getItem('uli_prosp_cfg');
+  prospCfg = stored ? JSON.parse(stored) : {
+    apifyKey: '', maxRes: 10, name: 'Ulises', agency: 'Ulisestudio (Diseño web)',
+    phone: '+54 9 11 6362-3650', email: 'ulisesdiaz1404@gmail.com', web: ''
+  };
+  prospSearchCount = parseInt(localStorage.getItem('uli_prosp_searches') || '0');
+  syncProspPill();
+
+  document.querySelectorAll('.prosp-opt').forEach(el => {
+    el.addEventListener('click', () => {
+      el.classList.toggle('on');
+      el.querySelector('input').checked = el.classList.contains('on');
+    });
+  });
+
+  const configForm = document.getElementById('prosp-config-form');
+  if (configForm) {
+    configForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveProspConfig();
+    });
+  }
+}
+
+function syncProspPill() {
+  const pill = document.getElementById('prospApiPill');
+  const text = document.getElementById('prospApiText');
+  if (!pill) return;
+  if (prospCfg.apifyKey) {
+    pill.className = 'prosp-api-pill on';
+    text.textContent = 'API activa';
+  } else {
+    pill.className = 'prosp-api-pill off';
+    text.textContent = 'Sin API key';
+  }
+}
+
+function setProspMode(m, btn) {
+  prospMode = m;
+  document.querySelectorAll('.prosp-mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const toggle = document.getElementById('prospModeToggle');
+  m === 'demo' ? toggle.classList.add('demo') : toggle.classList.remove('demo');
+  const n = document.getElementById('prospNotice');
+  m === 'demo' ? n.classList.add('show') : n.classList.remove('show');
+}
+
+async function openProspConfig() {
+  if (!isUnlocked) {
+    showToast('Desbloqueá la sección privada primero', 'error');
+    document.getElementById('ingresos').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+  const pass = prompt('Contraseña para acceder a la configuración:');
+  if (pass == null) return;
+  const h = await sha256(pass);
+  const stored = localStorage.getItem(STORE.passHash);
+  if (h !== stored) {
+    showToast('Contraseña incorrecta', 'error');
+    return;
+  }
+  document.getElementById('prospApifyKey').value = prospCfg.apifyKey || '';
+  document.getElementById('prospMaxRes').value = prospCfg.maxRes || 10;
+  document.getElementById('prospCfgName').value = prospCfg.name || 'Ulises';
+  document.getElementById('prospCfgAgency').value = prospCfg.agency || '';
+  document.getElementById('prospCfgPhone').value = prospCfg.phone || '';
+  document.getElementById('prospCfgEmail').value = prospCfg.email || '';
+  document.getElementById('prospCfgWeb').value = prospCfg.web || '';
+  document.getElementById('prosp-config-modal').classList.remove('hidden');
+}
+
+function closeProspConfig() {
+  document.getElementById('prosp-config-modal').classList.add('hidden');
+}
+
+function saveProspConfig() {
+  prospCfg = {
+    apifyKey: sanitizeInput(document.getElementById('prospApifyKey').value.trim()),
+    maxRes: parseInt(document.getElementById('prospMaxRes').value),
+    name: sanitizeInput(document.getElementById('prospCfgName').value.trim()),
+    agency: sanitizeInput(document.getElementById('prospCfgAgency').value.trim()),
+    phone: sanitizeInput(document.getElementById('prospCfgPhone').value.trim()),
+    email: sanitizeInput(document.getElementById('prospCfgEmail').value.trim()),
+    web: sanitizeInput(document.getElementById('prospCfgWeb').value.trim()),
+  };
+  localStorage.setItem('uli_prosp_cfg', JSON.stringify(prospCfg));
+  syncProspPill();
+  closeProspConfig();
+  showToast('Configuración guardada', 'success');
+}
+
+/* Rate limiting */
+function canSearch() {
+  const now = Date.now();
+  if (now - prospLastSearchTime < PROSP_RATE_LIMIT_MS) return false;
+  prospLastSearchTime = now;
+  return true;
+}
+
+/* Search */
+async function startProspSearch(e) {
+  if (!canSearch()) {
+    showToast('Esperá unos segundos antes de buscar de nuevo', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('prospSearchBtn');
+  const zone = sanitizeInput(document.getElementById('prospZoneIn').value.trim());
+  const biz = document.getElementById('prospBizType').value;
+
+  if (!zone) {
+    const input = document.getElementById('prospZoneIn');
+    input.focus();
+    input.style.borderColor = 'var(--danger)';
+    setTimeout(() => input.style.borderColor = '', 1500);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="prosp-spin"></span> Buscando...';
+  showProspLoading();
+  hideProspResults();
+
+  try {
+    const res = (prospMode === 'demo' || !prospCfg.apifyKey)
+      ? await prospDemoSearch(zone, biz)
+      : await prospApifySearch(zone, biz);
+    prospData = res;
+    prospSearchCount++;
+    localStorage.setItem('uli_prosp_searches', String(prospSearchCount));
+    renderProspResults(res);
+  } catch (err) {
+    showProspErr(err.message || 'Error desconocido');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg> Buscar clientes';
+    setTimeout(() => document.getElementById('prospLoading').classList.remove('show'), 500);
+  }
+}
+
+/* Apify real search */
+async function prospApifySearch(zone, biz) {
+  prospStep(1, 'active'); prospStatus('Conectando con Google Maps Scraper…', 12);
+  const query = biz ? `${biz} en ${zone}` : `negocios locales en ${zone}`;
+  const body = {
+    searchStringsArray: [query],
+    maxCrawledPlacesPerSearch: prospCfg.maxRes || 10,
+    language: 'es', countryCode: 'ar'
+  };
+  const r1 = await fetch(
+    `https://api.apify.com/v2/acts/compass~crawler-google-places/runs?token=${encodeURIComponent(prospCfg.apifyKey)}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+  );
+  if (!r1.ok) throw new Error(`Apify error ${r1.status}: verificá tu API key`);
+  const { data: { id: runId } } = await r1.json();
+  prospStep(1, 'done'); prospStep(2, 'active'); prospStatus('Scrapeando Google Maps (30–60 s)…', 30);
+  let tries = 0, ds;
+  while (tries < 50) {
+    await prospWait(3500);
+    const rs = await fetch(`https://api.apify.com/v2/actor-runs/${encodeURIComponent(runId)}?token=${encodeURIComponent(prospCfg.apifyKey)}`);
+    const rd = await rs.json();
+    const st = rd.data.status;
+    ds = rd.data.defaultDatasetId;
+    prospStatus(`Google Maps · estado: ${st}`, Math.min(30 + tries * 1.5, 72));
+    if (st === 'SUCCEEDED') break;
+    if (['FAILED', 'TIMED-OUT', 'ABORTED'].includes(st)) throw new Error(`Búsqueda: ${st}`);
+    tries++;
+  }
+  prospStatus('Descargando resultados…', 78);
+  const ri = await fetch(`https://api.apify.com/v2/datasets/${encodeURIComponent(ds)}/items?token=${encodeURIComponent(prospCfg.apifyKey)}&format=json`);
+  const items = await ri.json();
+  prospStep(2, 'done'); prospStep(3, 'active'); prospStatus('Analizando presencia web…', 85); await prospWait(400);
+  const out = items.map((p, i) => prospProcessPlace(p, i, biz));
+  prospStatus('Generando correos…', 93); await prospWait(500);
+  prospStep(3, 'done'); prospStep(4, 'active'); prospStatus('¡Listo!', 100); await prospWait(350);
+  return out;
+}
+
+function prospProcessPlace(p, i, biz) {
+  const site = p.website || '';
+  let wt = 'web';
+  if (!site) wt = 'sin-web';
+  else if (/instagram\.|facebook\./.test(site)) wt = 'redes';
+  else if (/tiendanube|mercadoshops/.test(site)) wt = 'tienda';
+  else if (/funfit|reservio|calendly/.test(site)) wt = 'app';
+  else if (/wix\.|weebly\.|webnode\./.test(site)) wt = 'constructor';
+  const anl = prospMakeAnalysis(p.title, wt, biz, p.totalScore);
+  const svc = prospMakeSvc(biz, wt);
+  return {
+    idx: i + 1, name: p.title || '—', cat: (p.categories || []).join(', ') || biz,
+    wt, wb: prospWBadge(wt), wc: prospWClass(wt), addr: p.address || '—',
+    phone: p.phone || null, email: null, site: site || null,
+    rating: p.totalScore ? parseFloat(p.totalScore).toFixed(1) : null,
+    reviews: p.reviewsCount || 0, anl, svc,
+    body: prospMakeEmail(p.title, biz || 'local', wt, anl, svc),
+    hasEmail: false, hasPhone: !!p.phone, hasWeb: wt !== 'sin-web'
+  };
+}
+
+/* Demo search */
+async function prospDemoSearch(zone, biz) {
+  const label = biz || 'negocios';
+  prospStep(1, 'active'); prospStatus('Simulando búsqueda…', 15); await prospWait(900);
+  prospStep(1, 'done'); prospStep(2, 'active'); prospStatus(`Analizando ${label} en ${zone}…`, 50); await prospWait(1100);
+  prospStep(2, 'done'); prospStep(3, 'active'); prospStatus('Generando correos…', 82); await prospWait(700);
+  prospStep(3, 'done'); prospStep(4, 'active'); prospStatus('¡Listo!', 100); await prospWait(300);
+  return getProspDemoList(zone, biz);
+}
+
+const PROSP_DEMOS = {
+  restaurante: [
+    { n: 'El Rincón', cat: 'Parrilla', wt: 'redes', ph: '+54 11 4523-1234', em: 'elrincon@gmail.com', addr: 'Av. Principal 1234', rat: '4.3', rev: 87 },
+    { n: 'Don Carlos Resto', cat: 'Bodegón', wt: 'sin-web', ph: '+54 11 6234-5678', em: 'doncarlosto@gmail.com', addr: 'Calle Belgrano 456', rat: '4.6', rev: 142 },
+    { n: 'La Esquina Verde', cat: 'Vegetariano', wt: 'web', ph: '+54 11 5567-8901', em: 'info@esquinaverde.com.ar', addr: 'Diagonal 789', rat: '4.8', rev: 203, site: 'https://esquinaverde.com.ar' },
+    { n: 'Sushi Nakamura', cat: 'Japonés', wt: 'tienda', ph: '+54 11 7234-5678', em: null, addr: 'Calle Comercio 321', rat: '4.5', rev: 96, site: 'https://sushinakamura.tiendanube.com' },
+    { n: 'Pizza & Co', cat: 'Pizzería', wt: 'redes', ph: '+54 11 4567-8901', em: 'pizzaco@gmail.com', addr: 'Av. San Martín 567', rat: '4.2', rev: 54 },
+  ],
+  peluqueria: [
+    { n: 'Studio Corte', cat: 'Peluquería Unisex', wt: 'sin-web', ph: '+54 11 5234-9012', em: 'studiocorte@gmail.com', addr: 'Calle Local 123', rat: '4.7', rev: 119 },
+    { n: 'Barber Zone', cat: 'Barbería', wt: 'redes', ph: '+54 11 6345-0123', em: null, addr: 'Av. Principal 890', rat: '4.9', rev: 87 },
+    { n: 'Esencia Salón', cat: 'Peluquería/Spa', wt: 'web', ph: '+54 11 7456-1234', em: 'info@esenciasalon.com', addr: 'Bulevar 234', rat: '4.4', rev: 165, site: 'https://esenciasalon.com' },
+    { n: 'Tijeras de Oro', cat: 'Peluquería', wt: 'sin-web', ph: '+54 11 5678-2345', em: null, addr: 'Pasaje Flores 56', rat: '4.3', rev: 41 },
+  ],
+  gimnasio: [
+    { n: 'Power Gym', cat: 'Gimnasio/Fitness', wt: 'app', ph: '+54 11 4789-3456', em: null, addr: 'Av. Deportes 100', rat: '4.2', rev: 73, site: 'https://powergym.funfit.app' },
+    { n: 'CrossFit Sur', cat: 'CrossFit/HIIT', wt: 'redes', ph: '+54 11 5890-4567', em: 'crossfit.sur@gmail.com', addr: 'Calle Atlética 200', rat: '4.8', rev: 134 },
+    { n: 'Estudio Pilates', cat: 'Pilates/Yoga', wt: 'web', ph: '+54 11 6901-5678', em: 'info@estudiopilates.com', addr: 'Pasaje Sereno 300', rat: '4.9', rev: 89, site: 'https://estudiopilates.com' },
+    { n: 'Muscle Factory', cat: 'Gym/Crossfit', wt: 'sin-web', ph: '+54 11 4321-6789', em: 'musclefactory@gmail.com', addr: 'Av. Industrial 450', rat: '4.0', rev: 62 },
+  ],
+  'estudio contable': [
+    { n: 'Díaz & Asociados', cat: 'Contable/Impositivo', wt: 'web', ph: '+54 11 4012-6789', em: 'info@diazasociados.com.ar', addr: 'Edificio Centro', rat: '4.8', rev: 27, site: 'https://diazasociados.com.ar' },
+    { n: 'López CPN', cat: 'Contadora Pública', wt: 'sin-web', ph: '+54 11 5123-7890', em: 'lopez.cpn@gmail.com', addr: 'Torre Profesional 4B', rat: '4.6', rev: 14 },
+    { n: 'AR Consulting', cat: 'Consultoría', wt: 'redes', ph: '+54 11 6234-8901', em: 'arconsulting@gmail.com', addr: 'Piso 3 Centro', rat: '4.5', rev: 31 },
+  ],
+  inmobiliaria: [
+    { n: 'Propiedades del Sur', cat: 'Inmobiliaria', wt: 'web', ph: '+54 11 4345-9012', em: 'ventas@propiedad.com.ar', addr: 'Av. Central 500', rat: '4.3', rev: 63, site: 'https://propiedades.com.ar' },
+    { n: 'Casa Fácil', cat: 'Alquileres', wt: 'redes', ph: '+54 11 5456-0123', em: null, addr: 'Galería Comercial', rat: '4.1', rev: 38 },
+    { n: 'Más Metros', cat: 'Inmobiliaria Premium', wt: 'web', ph: '+54 11 6567-1234', em: 'info@masmetros.com.ar', addr: 'Piso 1 Torre', rat: '4.7', rev: 92, site: 'https://masmetros.com.ar' },
+  ],
+};
+const PROSP_DEFAULT = [
+  { n: 'Café del Parque', cat: 'Cafetería', wt: 'redes', ph: '+54 11 4000-1111', em: 'cafedelparque@gmail.com', addr: 'Av. Rivadavia 3200', rat: '4.4', rev: 63 },
+  { n: 'Dr. Smile Odontología', cat: 'Clínica Odontológica', wt: 'sin-web', ph: '+54 11 5000-2222', em: 'drsmile@gmail.com', addr: 'Calle Mendoza 450', rat: '4.7', rev: 95 },
+  { n: 'Ferretería San José', cat: 'Ferretería', wt: 'web', ph: '+54 11 6000-3333', em: 'info@ferrsjose.com.ar', addr: 'Av. San Martín 780', rat: '4.2', rev: 41, site: 'https://ferrsjose.com.ar' },
+  { n: 'Kinesio Vital', cat: 'Kinesiología', wt: 'sin-web', ph: '+54 11 7111-4444', em: null, addr: 'Calle Belgrano 120', rat: '4.9', rev: 112 },
+  { n: 'Almacén Natural', cat: 'Dietética', wt: 'tienda', ph: '+54 11 3222-5555', em: 'almacennatural@gmail.com', addr: 'Pasaje Flores 56', rat: '4.6', rev: 78, site: 'https://almacennatural.tiendanube.com' },
+];
+
+function getProspDemoList(zone, biz) {
+  const list = (PROSP_DEMOS[biz] || PROSP_DEFAULT).map(p => ({ ...p, n: `${p.n} · ${zone}`, addr: `${p.addr}, ${zone}` }));
+  return list.map((p, i) => {
+    const anl = prospMakeAnalysis(p.n, p.wt, biz, p.rat);
+    const svc = prospMakeSvc(biz, p.wt);
+    return {
+      idx: i + 1, name: p.n, cat: p.cat, wt: p.wt, wb: prospWBadge(p.wt), wc: prospWClass(p.wt),
+      addr: p.addr, phone: p.ph || null, email: p.em || null, site: p.site || null,
+      rating: p.rat, reviews: p.rev, anl, svc,
+      body: prospMakeEmail(p.n, biz || 'local', p.wt, anl, svc),
+      hasEmail: !!p.em, hasPhone: !!p.ph, hasWeb: p.wt !== 'sin-web'
+    };
+  });
+}
+
+/* Generators */
+const PROSP_WEB_BADGE = { web: 'Web propia', tienda: 'Tienda online', redes: 'Solo redes', 'sin-web': 'Sin web', app: 'App terceros', constructor: 'Web builder' };
+const PROSP_WEB_CLASS = { web: 'b-blue', tienda: 'b-green', redes: 'b-amber', 'sin-web': 'b-amber', app: 'b-red', constructor: 'b-purple' };
+function prospWBadge(wt) { return PROSP_WEB_BADGE[wt] || wt; }
+function prospWClass(wt) { return PROSP_WEB_CLASS[wt] || 'b-blue'; }
+
+function prospMakeAnalysis(name, wt, biz, rat) {
+  const pool = {
+    'sin-web': ['Sin sitio web propio, solo redes. Pierde clientes que buscan en Google.', 'Sin dominio propio ni presencia indexable. Alta oportunidad.'],
+    'redes': ['Solo en redes sociales. Sin SEO local ni reservas automáticas.', 'Depende del algoritmo de redes. Sin web propia es invisible en Google.'],
+    'web': [(rat ? `${rat}★ en Google` : 'Buenas reseñas') + ' pero sitio con diseño anticuado y SEO débil.', 'Web propia pero poco responsive y sin llamadas a la acción claras.'],
+    'tienda': ['Tienda online con theme estándar. Margen de mejora en CRO y SEO.', 'Vende online pero sin dominio propio ni diseño diferenciador.'],
+    'app': ['Usa app genérica sin marca propia. Invisible en Google.', 'Plataforma de terceros: sin identidad online ni captación de leads.'],
+    'constructor': ['Web en constructor básico: carga lenta y SEO muy limitado.', 'Wix/Weebly: difícil de posicionar y poco profesional.'],
+  };
+  const p = pool[wt] || pool['redes'];
+  return p[Math.floor(Math.random() * p.length)];
+}
+
+function prospMakeSvc(biz, wt) {
+  const m = {
+    restaurante: { redes: 'Web con menú digital, reservas y delivery.', 'sin-web': 'Web con carta, reservas online y delivery.', web: 'Rediseño + carta interactiva y reservas.', tienda: 'Theme a medida + optimización de pedidos.' },
+    peluqueria: { 'sin-web': 'Web con turnos online 24/7 + WhatsApp.', redes: 'Web con agenda automática integrada a WhatsApp.', web: 'Rediseño + sistema de turnos y galería.' },
+    gimnasio: { 'sin-web': 'Web con grilla de clases y membresías online.', app: 'Web de marca con clases e inscripción online.', redes: 'Web propia con horarios y captación de leads.', web: 'Rediseño + pagos de cuotas y clases online.' },
+    'estudio contable': { 'sin-web': 'Web profesional con agenda de consultas.', redes: 'Web + SEO local y turnos online.', web: 'Rediseño moderno + velocidad y agenda.' },
+    inmobiliaria: { 'sin-web': 'Portal de propiedades + landing de tasaciones.', redes: 'Web con portal y captación de propietarios.', web: 'Rediseño + landing de tasaciones online.' },
+  };
+  const bm = m[biz] || {};
+  return bm[wt] || bm.redes || 'Web profesional con diseño a medida y SEO local.';
+}
+
+function prospMakeEmail(name, biz, wt, anl, svc) {
+  const { name: n, agency: ag, phone: ph, email: em, web: w } = prospCfg;
+  const intros = {
+    'sin-web': `Vi que ${name} tiene presencia en redes, pero no encontré un sitio web propio.`,
+    redes: `Vi que ${name} funciona en redes, pero sin un sitio web propio.`,
+    web: `Estuve revisando el sitio de ${name} y noté algunas oportunidades de mejora.`,
+    tienda: `Vi que ${name} ya vende online. Hay margen para aumentar las conversiones.`,
+    app: `Vi que ${name} usa una app genérica sin web propia con su marca.`,
+    constructor: `Revisé la web de ${name} y veo que está sobre un constructor básico.`
+  };
+  const sbj = {
+    'sin-web': `Una web propia para ${name}`, redes: `Más clientes online para ${name}`,
+    web: `Mejorar la web de ${name}`, tienda: `Más ventas en la tienda de ${name}`,
+    app: `Una web con marca propia para ${name}`, constructor: `Modernizar la web de ${name}`
+  };
+  return `Asunto: ${sbj[wt] || 'Propuesta para ' + name}\n\nHola, equipo de ${name}:\n\nSoy ${n || 'Ulises'}, de ${ag || 'Ulisestudio'}. ${intros[wt] || intros.web}\n\n${anl}\n\nMe gustaría proponerles ${svc.toLowerCase().replace(/\.$/, '')} para captar más clientes de forma automática.\n\n¿Tienen 15 minutos esta semana para una llamada? Les muestro ejemplos concretos y cómo quedaría para su negocio.\n\nSaludos,\n${n || 'Ulises'} — ${ag || 'Ulisestudio'}\n${ph || ''} · ${em || ''} · ${w || ''}`;
+}
+
+/* Render results */
+function renderProspResults(list) {
+  if (!list || !list.length) {
+    showProspEmpty('Sin resultados', 'No encontramos negocios. Probá con otra zona.');
+    return;
+  }
+  const onlyPhone = document.getElementById('prospOptPhone').classList.contains('on');
+  const filtered = onlyPhone ? list.filter(d => d.hasPhone) : list;
+  if (!filtered.length) {
+    showProspEmpty('Sin resultados con teléfono', 'Desactivá el filtro o intentá otra zona.');
+    return;
+  }
+
+  const kpis = document.getElementById('prospKpis');
+  kpis.classList.add('show');
+  document.querySelectorAll('.prosp-kpi').forEach((el, i) => {
+    setTimeout(() => el.classList.add('vis'), i * 120);
+  });
+  prospAnimN('pk1', filtered.length);
+  prospAnimN('pk2', filtered.filter(d => d.hasEmail).length);
+  prospAnimN('pk3', filtered.filter(d => d.hasPhone).length);
+  prospAnimN('pk4', filtered.filter(d => !d.hasWeb || d.wt === 'sin-web' || d.wt === 'redes').length);
+
+  const tb = document.getElementById('prospTbody');
+  tb.innerHTML = '';
+  filtered.forEach((item, i) => {
+    const tr = document.createElement('tr');
+    tr.style.animationDelay = `${i * 70}ms`;
+    tr.innerHTML = `
+      <td class="idx-cell">${item.idx}</td>
+      <td><div class="biz-name">${escapeHtml(item.name)}</div><div class="biz-cat">${escapeHtml(item.cat)}</div>
+        ${item.rating ? `<div><span class="stars">${'★'.repeat(Math.round(parseFloat(item.rating)))}</span><span class="rat">${item.rating} (${item.reviews})</span></div>` : ''}</td>
+      <td><span class="prosp-badge ${item.wc}" style="animation-delay:${i * 70 + 200}ms">${item.wb}</span></td>
+      <td class="ci">${escapeHtml(item.addr)}</td>
+      <td class="ci">${item.email ? `<a href="mailto:${escapeAttr(item.email)}">${escapeHtml(item.email)}</a><br>` : '<span style="color:var(--text-dim);font-size:11px">sin email</span><br>'}${item.phone || '—'}${item.site ? `<br><a href="${escapeAttr(item.site)}" target="_blank" rel="noopener" style="font-size:11px">${prospTryHost(item.site)}</a>` : ''}</td>
+      <td class="anl">${escapeHtml(item.anl)}</td>
+      <td class="svc">${escapeHtml(item.svc)}</td>`;
+    tb.appendChild(tr);
+  });
+
+  document.getElementById('prospRCount').textContent = `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''}`;
+  document.getElementById('prospResults').classList.add('show');
+
+  if (document.getElementById('prospOptEmail').classList.contains('on')) {
+    renderProspEmails(filtered);
+    document.getElementById('prospEmails').classList.add('show');
+    document.getElementById('prospECount').textContent = `${filtered.length} correo${filtered.length !== 1 ? 's' : ''}`;
+  }
+
+  setTimeout(() => {
+    document.getElementById('prospResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const obs = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('vis'); obs.unobserve(e.target); }
+    }), { threshold: 0.1 });
+    const leg = document.getElementById('prospLegend');
+    if (leg) obs.observe(leg);
+  }, 200);
+}
+
+function renderProspEmails(list) {
+  const grid = document.getElementById('prospEmailGrid');
+  grid.innerHTML = '';
+  list.forEach((item, i) => {
+    const c = document.createElement('div');
+    c.className = 'prosp-ecard';
+    c.style.animationDelay = `${i * 90}ms`;
+    c.innerHTML = `
+      <div class="prosp-ecard-top">
+        <div style="flex:1;min-width:0"><div class="prosp-ecard-name">${escapeHtml(item.name)}</div>
+          <div class="prosp-ecard-to"><svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+            ${escapeHtml(item.email || item.phone || 'Sin contacto')}</div></div>
+        <div class="prosp-ecard-num">${item.idx}</div></div>
+      <div class="prosp-ecard-body" id="peb${i}">${escapeHtml(item.body)}</div>
+      <div class="prosp-ecard-foot"><div class="prosp-ecard-meta">${escapeHtml(item.addr)}</div>
+        <div class="prosp-ecard-acts">
+          <button class="prosp-btn-sm" onclick="toggleProspExp(${i})">Ver todo</button>
+          <button class="prosp-btn-sm" id="pcp${i}" onclick="copyProspEmail(${i},this)">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg>
+            Copiar</button></div></div>`;
+    grid.appendChild(c);
+  });
+}
+
+function toggleProspExp(i) {
+  const el = document.getElementById('peb' + i);
+  const btn = el.closest('.prosp-ecard').querySelector('.prosp-btn-sm');
+  el.classList.toggle('expanded');
+  btn.textContent = el.classList.contains('expanded') ? 'Ver menos' : 'Ver todo';
+}
+
+function copyProspEmail(i, btn) {
+  const txt = prospData[i]?.body || '';
+  navigator.clipboard.writeText(txt).then(() => {
+    btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" style="width:12px;height:12px"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> ¡Copiado!';
+    btn.classList.add('ok');
+    setTimeout(() => {
+      btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" style="width:12px;height:12px"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg> Copiar';
+      btn.classList.remove('ok');
+    }, 1800);
+  });
+}
+
+/* Loading helpers */
+function showProspLoading() {
+  document.getElementById('prospLoading').classList.add('show');
+  [1, 2, 3, 4].forEach(n => prospStep(n, ''));
+  prospProg(0);
+}
+function hideProspResults() {
+  ['prospKpis', 'prospResults', 'prospEmails', 'prospEmpty'].forEach(id => {
+    document.getElementById(id).classList.remove('show');
+  });
+  document.querySelectorAll('.prosp-kpi').forEach(el => el.classList.remove('vis'));
+}
+function prospStatus(msg, pct) {
+  document.getElementById('prospLdStatus').textContent = msg;
+  if (pct !== undefined) prospProg(pct);
+}
+function prospProg(pct) {
+  document.getElementById('prospProgFill').style.width = pct + '%';
+}
+function prospStep(n, state) {
+  const el = document.getElementById('ps' + n);
+  el.classList.remove('active', 'done');
+  if (state) el.classList.add(state);
+}
+function showProspEmpty(title, desc) {
+  document.getElementById('prospEmptyTitle').textContent = title;
+  document.getElementById('prospEmptyDesc').textContent = desc;
+  document.getElementById('prospEmptyIc').textContent = '🔍';
+  document.getElementById('prospEmpty').classList.add('show');
+}
+function showProspErr(msg) {
+  document.getElementById('prospLoading').classList.remove('show');
+  document.getElementById('prospEmptyIc').textContent = '✕';
+  document.getElementById('prospEmptyTitle').textContent = 'Error en la búsqueda';
+  document.getElementById('prospEmptyDesc').textContent = msg;
+  document.getElementById('prospEmpty').classList.add('show');
+}
+
+function prospAnimN(id, target) {
+  const el = document.getElementById(id);
+  let cur = 0;
+  const step = Math.max(1, Math.ceil(target / 20));
+  const t = setInterval(() => {
+    cur = Math.min(cur + step, target);
+    el.textContent = cur;
+    if (cur >= target) {
+      clearInterval(t);
+      el.style.animation = 'prospCountPop .3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    }
+  }, 40);
+}
+
+function prospWait(ms) { return new Promise(r => setTimeout(r, ms)); }
+function prospTryHost(u) { try { return new URL(u).hostname; } catch { return u; } }
+
+/* Export */
+function exportProspHTML() {
+  const section = document.getElementById('prospResults');
+  if (!section) return;
+  const clone = section.cloneNode(true);
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Prospección — Ulises Studio</title><style>body{font-family:system-ui;background:#0c0a10;color:#fff;padding:24px}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:12px;border-bottom:1px solid rgba(255,255,255,.1)}th{background:rgba(255,255,255,.05);font-size:11px;text-transform:uppercase;letter-spacing:.1em}</style></head><body>${clone.innerHTML}</body></html>`;
+  const b = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b);
+  a.download = `prospeccion-${new Date().toISOString().split('T')[0]}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ============================================
+   HERO GEOMÉTRICO — Animaciones JS
+   ============================================ */
+function initGeoHero() {
+  animateShapes();
+  animateHeroContent();
+}
+
+function animateShapes() {
+  var shapes = [
+    { el: document.querySelector('.geo-entry-1'), delay: 300,  rotFrom: -3,  rotTo: 12  },
+    { el: document.querySelector('.geo-entry-2'), delay: 500,  rotFrom: -30, rotTo: -15 },
+    { el: document.querySelector('.geo-entry-3'), delay: 400,  rotFrom: -23, rotTo: -8  },
+    { el: document.querySelector('.geo-entry-4'), delay: 600,  rotFrom: 5,   rotTo: 20  },
+    { el: document.querySelector('.geo-entry-5'), delay: 700,  rotFrom: -40, rotTo: -25 },
+  ];
+
+  shapes.forEach(function(s) {
+    if (!s.el) return;
+    var outer = s.el;
+    var inner = outer.querySelector('.geo-shape');
+
+    // Set initial state
+    outer.style.opacity = '0';
+    outer.style.transform = 'translateY(-150px) rotate(' + s.rotFrom + 'deg)';
+
+    // Entry animation after delay
+    setTimeout(function() {
+      var start = performance.now();
+      var duration = 2400;
+
+      function tickEntry(now) {
+        var elapsed = now - start;
+        var t = Math.min(elapsed / duration, 1);
+        // Custom ease: cubic-bezier(0.23, 0.86, 0.39, 0.96) approximation
+        var ease = 1 - Math.pow(1 - t, 3);
+
+        var y = -150 * (1 - ease);
+        var rot = s.rotFrom + (s.rotTo - s.rotFrom) * ease;
+        var opacity = Math.min(t / 0.5, 1); // fade in during first half
+
+        outer.style.opacity = String(opacity);
+        outer.style.transform = 'translateY(' + y + 'px) rotate(' + rot + 'deg)';
+
+        if (t < 1) {
+          requestAnimationFrame(tickEntry);
+        } else {
+          // Entry done — start infinite float on inner
+          startFloat(inner);
+        }
+      }
+      requestAnimationFrame(tickEntry);
+    }, s.delay);
+  });
+}
+
+function startFloat(el) {
+  if (!el) return;
+  var start = performance.now();
+  var duration = 12000;
+
+  function tickFloat(now) {
+    var elapsed = (now - start) % duration;
+    var t = elapsed / duration;
+    // sine wave: 0 → 15 → 0
+    var y = Math.sin(t * Math.PI * 2) * 15;
+    el.style.transform = 'translateY(' + y + 'px)';
+    requestAnimationFrame(tickFloat);
+  }
+  requestAnimationFrame(tickFloat);
+}
+
+function animateHeroContent() {
+  var items = document.querySelectorAll('.geo-fade-up');
+  items.forEach(function(el, i) {
+    var delay = 500 + i * 200;
+    setTimeout(function() {
+      el.classList.add('geo-visible');
+    }, delay);
+  });
+}
+
+/* ============================================
+   PLANETA — Partículas JS + Pulso
+   ============================================ */
+function initPlanetParticles() {
+  var particles = document.querySelectorAll('.particle-container .particle');
+  if (!particles.length) return;
+
+  // Planet glow pulse via JS
+  var planet = document.querySelector('.planet');
+  if (planet) {
+    var pulseStart = performance.now();
+    function pulsePlanet(now) {
+      var t = ((now - pulseStart) % 8000) / 8000;
+      var intensity = 0.5 + 0.5 * Math.sin(t * Math.PI * 2);
+      var s1 = 45 + intensity * 15;
+      var s2 = 90 + intensity * 30;
+      var s3 = 170 + intensity * 30;
+      var o1 = 0.55 + intensity * 0.15;
+      var o2 = 0.4 + intensity * 0.1;
+      planet.style.boxShadow =
+        '0 0 0 1px rgba(255,255,255,' + (0.95 + intensity * 0.05) + '),' +
+        '0 0 ' + (3 + intensity * 5) + 'px 0.5px rgba(255,255,255,' + (0.8 + intensity * 0.2) + '),' +
+        '0 0 ' + (10 + intensity * 14) + 'px 1px rgba(200,235,255,' + (0.7 + intensity * 0.15) + '),' +
+        '0 0 ' + s1 + 'px 4px rgba(0,200,255,' + o1 + '),' +
+        '0 0 ' + s2 + 'px 10px rgba(0,160,255,' + o2 + '),' +
+        '0 0 ' + s3 + 'px 24px rgba(0,128,255,' + (0.2 + intensity * 0.1) + '),' +
+        '0 0 260px 50px rgba(0,100,220,' + (0.12 + intensity * 0.06) + ')';
+      requestAnimationFrame(pulsePlanet);
+    }
+    requestAnimationFrame(pulsePlanet);
+  }
+
+  // Animate each particle with JS
+  particles.forEach(function(p, i) {
+    var isSurface = p.classList.contains('surface');
+    var duration = isSurface ? (8000 + Math.random() * 5000) : (18000 + Math.random() * 12000);
+    var rangeX = isSurface ? (30 + Math.random() * 30) : (100 + Math.random() * 160);
+    var rangeY = isSurface ? (20 + Math.random() * 25) : (80 + Math.random() * 160);
+    var dirX = Math.random() > 0.5 ? 1 : -1;
+    var dirY = Math.random() > 0.5 ? 1 : -1;
+    var phaseX = Math.random() * Math.PI * 2;
+    var phaseY = Math.random() * Math.PI * 2;
+    var phaseO = Math.random() * Math.PI * 2;
+    var startTime = performance.now() + i * 200;
+
+    function tickParticle(now) {
+      var elapsed = now - startTime;
+      if (elapsed < 0) { requestAnimationFrame(tickParticle); return; }
+      var t = (elapsed % duration) / duration;
+      var x = Math.sin(t * Math.PI * 2 + phaseX) * rangeX * dirX;
+      var y = Math.sin(t * Math.PI * 2 + phaseY) * rangeY * dirY;
+      var opacity = 0.15 + 0.85 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2 * 2 + phaseO));
+
+      if (isSurface) {
+        var scale = 0.7 + 0.6 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2 * 3 + phaseO));
+        p.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0) scale(' + scale + ')';
+      } else {
+        p.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)';
+      }
+      p.style.opacity = String(opacity);
+      requestAnimationFrame(tickParticle);
+    }
+    requestAnimationFrame(tickParticle);
+  });
+}
+
+/* ============================================
+   SEGURIDAD ANTI-MALWARE
+   ============================================ */
+function initSecurityLayer() {
+  sanitizeAllInputsOnBlur();
+  preventClickjacking();
+  monitorDOMTampering();
+  blockSuspiciousPatterns();
+}
+
+function sanitizeInput(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .replace(/data:text\/html/gi, '')
+    .replace(/vbscript:/gi, '')
+    .trim();
+}
+
+function sanitizeAllInputsOnBlur() {
+  document.addEventListener('blur', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      if (e.target.type !== 'password' && e.target.type !== 'file') {
+        const val = e.target.value;
+        const clean = sanitizeInput(val);
+        if (val !== clean) e.target.value = clean;
+      }
+    }
+  }, true);
+}
+
+function preventClickjacking() {
+  if (window.self !== window.top) {
+    try {
+      if (window.top.location.hostname !== window.self.location.hostname) {
+        document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#fda4af;font-size:18px;">Esta página no puede mostrarse en un iframe externo.</div>';
+      }
+    } catch {
+      document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#fda4af;font-size:18px;">Esta página no puede mostrarse en un iframe externo.</div>';
+    }
+  }
+}
+
+function monitorDOMTampering() {
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((m) => {
+      m.addedNodes.forEach((node) => {
+        if (node.nodeType === 1) {
+          if (node.tagName === 'SCRIPT' && !node.src?.includes('cdn.jsdelivr.net') && !node.src?.includes('chart.js')) {
+            node.remove();
+          }
+          if (node.tagName === 'IFRAME' || node.tagName === 'OBJECT' || node.tagName === 'EMBED') {
+            node.remove();
+          }
+          const attrs = node.attributes;
+          if (attrs) {
+            for (let i = attrs.length - 1; i >= 0; i--) {
+              if (attrs[i].name.startsWith('on') && attrs[i].name !== 'onclick') {
+                node.removeAttribute(attrs[i].name);
+              }
+            }
+          }
+        }
+      });
+    });
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function blockSuspiciousPatterns() {
+  const origOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    const allowed = ['formsubmit.co', 'api.apify.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'];
+    try {
+      const parsed = new URL(url, window.location.origin);
+      if (parsed.origin !== window.location.origin && !allowed.some(d => parsed.hostname.includes(d))) {
+        console.warn('[Security] Blocked XHR to:', url);
+        return;
+      }
+    } catch {}
+    return origOpen.apply(this, arguments);
+  };
+}
