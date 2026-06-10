@@ -12,6 +12,7 @@ const STORE = {
 };
 
 const DEFAULT_PASSWORD = 'Ulises123@';
+const ADMIN_KEY = 'us_admin'; // bandera de panel desbloqueado en este dispositivo
 let isUnlocked = false;
 
 const fmtMoney = (n) =>
@@ -136,7 +137,7 @@ function renderProyectos() {
         </div>
         <div class="project-actions">
           ${p.url ? `<a href="${escapeAttr(p.url)}" target="_blank" rel="noopener" class="project-link">Ver sitio →</a>` : '<span></span>'}
-          <div style="margin-left:auto; display:flex; gap:4px;">
+          <div class="admin-only" style="margin-left:auto; display:flex; gap:4px;">
             <button class="btn-icon" onclick="editProyecto('${p.id}')" title="Editar">✎</button>
             <button class="btn-icon danger" onclick="deleteProyecto('${p.id}')" title="Eliminar">🗑</button>
           </div>
@@ -386,7 +387,7 @@ function renderResenias() {
     return `
       <article class="testimonial">
         ${!dup ? `
-          <div class="testimonial-actions">
+          <div class="testimonial-actions admin-only">
             <button class="btn-icon" onclick="editResenia('${r.id}')" title="Editar">✎</button>
             <button class="btn-icon danger" onclick="deleteResenia('${r.id}')" title="Eliminar">🗑</button>
           </div>
@@ -943,6 +944,78 @@ document.getElementById('lock-form').addEventListener('submit', async (e) => {
 });
 
 /* ============================================
+   ACCESO AL PANEL PRIVADO (solo Ulises)
+   Público por defecto. Se entra por /#panel + contraseña.
+   Una vez validado, queda recordado en este dispositivo.
+   ============================================ */
+function isAdminStored() {
+  return localStorage.getItem(ADMIN_KEY) === '1';
+}
+
+function enterAdmin() {
+  document.body.classList.add('admin');
+  localStorage.setItem(ADMIN_KEY, '1');
+  isUnlocked = true;
+  applyLockUI();      // muestra el contenido de ingresos
+  renderIngresos();
+  closePanelLogin();
+}
+
+function exitAdmin() {
+  localStorage.removeItem(ADMIN_KEY);
+  document.body.classList.remove('admin');
+  isUnlocked = false;
+  if (location.hash === '#panel') history.replaceState(null, '', location.pathname);
+  location.reload(); // vuelve limpio al estado público
+}
+
+function openPanelLogin() {
+  const el = document.getElementById('panel-login');
+  if (!el) return;
+  el.classList.remove('hidden');
+  setTimeout(() => document.getElementById('panel-login-input').focus(), 60);
+}
+
+function closePanelLogin() {
+  const el = document.getElementById('panel-login');
+  if (!el) return;
+  el.classList.add('hidden');
+  document.getElementById('panel-login-input').value = '';
+  document.getElementById('panel-login-err').textContent = '';
+}
+
+function initPanelAccess() {
+  // Si ya está validado en este dispositivo, entra directo.
+  if (isAdminStored()) {
+    enterAdmin();
+    return;
+  }
+
+  const form = document.getElementById('panel-login-form');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const inp = document.getElementById('panel-login-input');
+      const err = document.getElementById('panel-login-err');
+      const ok = (await sha256(inp.value)) === localStorage.getItem(STORE.passHash);
+      if (ok) {
+        enterAdmin();
+      } else {
+        err.textContent = 'Contraseña incorrecta';
+        inp.value = '';
+        inp.focus();
+      }
+    });
+  }
+
+  // Mostrar login solo si entran por /#panel
+  if (location.hash === '#panel') openPanelLogin();
+  window.addEventListener('hashchange', () => {
+    if (location.hash === '#panel' && !isAdminStored()) openPanelLogin();
+  });
+}
+
+/* ============================================
    INIT
    ============================================ */
 document.getElementById('year').textContent = new Date().getFullYear();
@@ -954,7 +1027,8 @@ document.getElementById('year').textContent = new Date().getFullYear();
   renderClientes();
   renderResenias();
   renderInquiries();
-  applyLockUI();
+  renderStats();
+  initPanelAccess();
   initScrollAnimations();
   initProspeccion();
   initSecurityLayer();
@@ -1364,7 +1438,8 @@ function renderProspEmails(list) {
           <button class="prosp-btn-sm" onclick="toggleProspExp(${i})">Ver todo</button>
           <button class="prosp-btn-sm" id="pcp${i}" onclick="copyProspEmail(${i},this)">
             <svg viewBox="0 0 20 20" fill="currentColor"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg>
-            Copiar</button></div></div>`;
+            Copiar</button></div></div>
+      ${prospSendButtons(i)}`;
     grid.appendChild(c);
   });
 }
@@ -1455,6 +1530,151 @@ function exportProspHTML() {
   a.download = `prospeccion-${new Date().toISOString().split('T')[0]}.html`;
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+/* ============================================
+   PROSPECCIÓN — Envío de mensajes
+   WhatsApp / Gmail / Instagram con el texto YA escrito.
+   Nota: las plataformas no permiten envío masivo en silencio;
+   acá abrimos el mensaje prellenado y vos enviás con un click.
+   ============================================ */
+function prospWaNumber(phone) {
+  let d = String(phone || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.startsWith('54')) return d;
+  if (d.startsWith('0')) d = d.slice(1);
+  if (d.startsWith('15')) d = d.slice(2); // prefijo móvil local AR
+  return '54' + d;
+}
+
+function prospIgUrl(item) {
+  const s = item && item.site ? item.site : '';
+  if (/instagram\./i.test(s)) return s.startsWith('http') ? s : 'https://' + s;
+  return '';
+}
+
+function prospParseEmail(body) {
+  const m = String(body || '').match(/^Asunto:\s*(.*)\n\n([\s\S]*)$/);
+  if (m) return { subject: m[1].trim(), text: m[2].trim() };
+  return { subject: 'Propuesta de Ulisestudio', text: body || '' };
+}
+
+function prospWaText(item) {
+  const { name: n, agency: ag, email: em, web: w } = prospCfg;
+  const linea = (item.svc ? item.svc.replace(/\.$/, '') : 'una web profesional').toLowerCase();
+  const contacto = w || em || '';
+  return `Hola! 👋 Soy ${n || 'Ulises'} de ${ag || 'Ulisestudio'}. Vi ${item.name} y me gustaría proponerles ${linea} para captar más clientes. ¿Tienen 15 min esta semana para mostrarles cómo quedaría?${contacto ? ' ' + contacto : ''}`;
+}
+
+function openProspWhatsApp(i) {
+  const item = prospData[i];
+  if (!item) return;
+  const num = prospWaNumber(item.phone);
+  if (!num) { showToast('Este local no tiene teléfono', 'error'); return; }
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(prospWaText(item))}`, '_blank', 'noopener');
+}
+
+function openProspGmail(i) {
+  const item = prospData[i];
+  if (!item) return;
+  const { subject, text } = prospParseEmail(item.body);
+  let url = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+  if (item.email) url += `&to=${encodeURIComponent(item.email)}`;
+  window.open(url, '_blank', 'noopener');
+  if (!item.email) showToast('Sin email detectado: completá el destinatario en Gmail', 'success');
+}
+
+function openProspInstagram(i) {
+  const item = prospData[i];
+  if (!item) return;
+  const ig = prospIgUrl(item);
+  if (!ig) { showToast('Este local no tiene Instagram detectado', 'error'); return; }
+  if (navigator.clipboard) navigator.clipboard.writeText(prospWaText(item)).catch(() => {});
+  window.open(ig, '_blank', 'noopener');
+  showToast('Mensaje copiado: pegalo en el DM de Instagram', 'success');
+}
+
+/* SVGs chicos para los botones */
+const PROSP_ICONS = {
+  wa: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.597 20.13c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.978-1.207zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>',
+  gm: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>',
+  ig: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>',
+};
+
+function prospSendButtons(i) {
+  const item = prospData[i];
+  if (!item) return '';
+  const ig = prospIgUrl(item);
+  return `
+    <div class="prosp-send-row">
+      <button class="prosp-send-btn wa" onclick="openProspWhatsApp(${i})" ${item.phone ? '' : 'disabled title="Sin teléfono"'}>${PROSP_ICONS.wa} WhatsApp</button>
+      <button class="prosp-send-btn gm" onclick="openProspGmail(${i})">${PROSP_ICONS.gm} Gmail</button>
+      <button class="prosp-send-btn ig" onclick="openProspInstagram(${i})" ${ig ? '' : 'disabled title="Sin Instagram"'}>${PROSP_ICONS.ig} Instagram</button>
+    </div>`;
+}
+
+/* ============================================
+   PROSPECCIÓN — Asistente "Enviar a todos"
+   ============================================ */
+let senderList = [];
+let senderIdx = 0;
+
+function startSendAll() {
+  const onlyPhone = document.getElementById('prospOptPhone').classList.contains('on');
+  senderList = (onlyPhone ? prospData.filter(d => d.hasPhone) : prospData).slice();
+  if (!senderList.length) { showToast('No hay locales para enviar. Hacé una búsqueda primero.', 'error'); return; }
+  senderIdx = 0;
+  document.getElementById('sender-modal').classList.remove('hidden');
+  renderSender();
+}
+
+function closeSendAll() {
+  document.getElementById('sender-modal').classList.add('hidden');
+}
+
+function renderSender() {
+  const item = senderList[senderIdx];
+  if (!item) return;
+  const total = senderList.length;
+  const gi = prospData.indexOf(item);
+  const ig = prospIgUrl(item);
+
+  document.getElementById('senderProgress').textContent = `Local ${senderIdx + 1} / ${total}`;
+  document.getElementById('senderBarFill').style.width = `${((senderIdx + 1) / total) * 100}%`;
+  document.getElementById('senderName').textContent = item.name;
+  document.getElementById('senderMeta').textContent =
+    [item.cat, item.addr, item.phone, item.email].filter(Boolean).join(' · ') || '—';
+  document.getElementById('senderMsg').textContent = prospWaText(item);
+
+  document.getElementById('senderActions').innerHTML = `
+    <button class="btn btn-primary" ${item.phone ? '' : 'disabled'} onclick="openProspWhatsApp(${gi})">WhatsApp</button>
+    <button class="btn btn-dark" onclick="openProspGmail(${gi})">Gmail</button>
+    <button class="btn btn-light" ${ig ? '' : 'disabled'} onclick="openProspInstagram(${gi})">Instagram</button>`;
+
+  document.getElementById('senderPrev').disabled = senderIdx === 0;
+  document.getElementById('senderNext').textContent = senderIdx === total - 1 ? 'Terminar' : 'Siguiente →';
+}
+
+function sendAllNext() {
+  if (senderIdx >= senderList.length - 1) {
+    closeSendAll();
+    showToast('¡Recorriste todos los locales! 🎉', 'success');
+    return;
+  }
+  senderIdx++;
+  renderSender();
+}
+
+function sendAllPrev() {
+  if (senderIdx > 0) { senderIdx--; renderSender(); }
+}
+
+function copySenderMsg() {
+  const item = senderList[senderIdx];
+  if (!item || !navigator.clipboard) return;
+  navigator.clipboard.writeText(prospWaText(item))
+    .then(() => showToast('Mensaje copiado', 'success'))
+    .catch(() => {});
 }
 
 /* ============================================

@@ -1663,13 +1663,90 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 
 .lock-error { color: #fda4af; font-size: 14px; margin-top: 16px; font-weight: 500; }
 
-/* Hide private stats when locked */
-body.locked .stat-private { display: none; }
-body.locked .stats .container { grid-template-columns: repeat(2, 1fr); }
+/* ===========================================================
+   VISIBILIDAD DEL PANEL PRIVADO
+   Por defecto (visitante normal) TODO lo privado está oculto.
+   Solo se muestra cuando body tiene la clase .admin (Ulises).
+   =========================================================== */
+body:not(.admin) .stat-private,
+body:not(.admin) .private-block,
+body:not(.admin) .nav-private,
+body:not(.admin) #clientes,
+body:not(.admin) #ingresos,
+body:not(.admin) .admin-only {
+  display: none !important;
+}
+body:not(.admin) .stats .container {
+  grid-template-columns: repeat(2, 1fr);
+}
 
-/* Hide private blocks (consultas) when locked */
-body.locked .private-block { display: none; }
-body.locked .nav-private { display: none; }
+/* Overlay de login para acceder al panel (solo via #panel) */
+.panel-login {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 6, 12, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.panel-login.hidden { display: none; }
+.panel-login-card {
+  width: min(420px, 90vw);
+  background: rgba(20, 16, 28, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  padding: 40px 34px;
+  text-align: center;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
+}
+.panel-login-card .lock-icon {
+  margin: 0 auto 18px;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 200, 90, 0.12);
+  color: #ffce6a;
+}
+.panel-login-card h3 {
+  font-size: 24px;
+  margin: 0 0 6px;
+}
+.panel-login-card p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0 0 22px;
+}
+.panel-login-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.panel-login-card input {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 15px;
+  text-align: center;
+}
+.panel-login-err {
+  color: #fda4af;
+  font-size: 13px;
+  min-height: 18px;
+}
+.panel-login-back {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.panel-login-back:hover { color: #fff; }
 
 .private-tag {
   display: inline-flex;
@@ -2801,3 +2878,125 @@ body.locked .nav-private { display: none; }
   50% { transform: scale(1.12); }
   100% { transform: scale(1); }
 }
+
+/* ===========================================================
+   PROSPECCIÓN — Botones de envío (WhatsApp / Gmail / Instagram)
+   =========================================================== */
+.prosp-send-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.prosp-send-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+.prosp-send-btn svg { width: 14px; height: 14px; }
+.prosp-send-btn:hover { transform: translateY(-1px); }
+.prosp-send-btn.wa:hover { background: rgba(37, 211, 102, 0.16); border-color: rgba(37, 211, 102, 0.5); }
+.prosp-send-btn.gm:hover { background: rgba(234, 67, 53, 0.16); border-color: rgba(234, 67, 53, 0.5); }
+.prosp-send-btn.ig:hover { background: rgba(225, 48, 108, 0.16); border-color: rgba(225, 48, 108, 0.5); }
+.prosp-send-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+.prosp-sendall-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* Asistente "Enviar a todos" */
+.sender-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 6, 12, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.sender-modal.hidden { display: none; }
+.sender-card {
+  width: min(560px, 94vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: rgba(20, 16, 28, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  padding: 28px;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
+}
+.sender-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.sender-progress {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.sender-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 14px 0 18px;
+  overflow: hidden;
+}
+.sender-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffce6a, #ff9b3d);
+  transition: width 0.3s ease;
+}
+.sender-name { font-size: 22px; font-weight: 700; margin: 0 0 2px; }
+.sender-meta { font-size: 13px; color: var(--text-muted); margin: 0 0 16px; }
+.sender-msg {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 18px;
+}
+.sender-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.sender-actions .btn { flex: 1; min-width: 120px; justify-content: center; }
+.sender-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 18px;
+  gap: 10px;
+}
+.sender-nav button {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.sender-nav button:hover { background: rgba(255, 255, 255, 0.06); }
+.sender-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
